@@ -34,8 +34,8 @@ def main():
         torch.backends.cudnn.deterministic = True
 
     sp_dir1 = "onegame"
-    sp_dir2 = "distill"
-    log_dir = os.path.expanduser(args.log_dir + args.env_name + "sp_dir2")
+    #sp_dir2 = "distill"
+    log_dir = os.path.expanduser(args.log_dir + args.env_name + "sp_dir1")
     eval_log_dir = log_dir + "_eval"
     utils.cleanup_log_dir(log_dir)
     utils.cleanup_log_dir(eval_log_dir)
