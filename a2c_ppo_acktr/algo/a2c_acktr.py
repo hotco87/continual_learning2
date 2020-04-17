@@ -100,32 +100,18 @@ class A2C_ACKTR():
 
         action_loss2 = -(advantages2.detach() * action_log_probs2).mean()
 
-        print("value_loss2 :", value_loss2)
-        print("advantages2 ", advantages2)
-
+        #print("value_loss2 :", value_loss2)
+        #print("advantages2 ", advantages2)
         ###########################################################
 
-        # if self.acktr and self.optimizer.steps % self.optimizer.Ts == 0:
-        #     # Compute fisher, see Martens 2014
-        #     self.actor_critic.zero_grad()
-        #     pg_fisher_loss = -action_log_probs.mean()
-        #
-        #     value_noise = torch.randn(values.size())
-        #     if values.is_cuda:
-        #         value_noise = value_noise.cuda()
-        #
-        #     sample_values = values + value_noise
-        #     vf_fisher_loss = -(values - sample_values.detach()).pow(2).mean()
-        #
-        #     fisher_loss = pg_fisher_loss + vf_fisher_loss
-        #     self.optimizer.acc_stats = True
-        #     fisher_loss.backward(retain_graph=True)
-        #     self.optimizer.acc_stats = False
-
         self.optimizer.zero_grad()
-        (value_loss * self.value_loss_coef + action_loss -
-         dist_entropy * self.entropy_coef).backward()
+        action_loss.backward()
+        #print("action_loss: ",action_loss)
+        # (value_loss * self.value_loss_coef + action_loss -
+        #  dist_entropy * self.entropy_coef).backward()
         self.optimizer2.zero_grad()
+        # print(value_loss2 * self.value_loss_coef + action_loss2 -
+        #  dist_entropy2 * self.entropy_coef)
         (value_loss2 * self.value_loss_coef + action_loss2 -
          dist_entropy2 * self.entropy_coef).backward()
 
@@ -138,5 +124,8 @@ class A2C_ACKTR():
         self.optimizer.step()
         self.optimizer2.step()
 
-        return value_loss.item(), action_loss.item(), dist_entropy.item(), \
+        return action_loss.item(),\
                value_loss2.item(), action_loss2.item(), dist_entropy2.item()
+
+        # return value_loss.item(), action_loss.item(), dist_entropy.item(), \
+        #        value_loss2.item(), action_loss2.item(), dist_entropy2.item()

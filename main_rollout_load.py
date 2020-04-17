@@ -33,12 +33,12 @@ def main():
         torch.backends.cudnn.benchmark = False
         torch.backends.cudnn.deterministic = True
 
-    log_dir = os.path.expanduser(args.log_dir + args.env_name)
+    log_dir = os.path.expanduser(args.log_dir + args.env_name  + "/distill/")
     eval_log_dir = log_dir + "_eval"
     utils.cleanup_log_dir(log_dir)
     utils.cleanup_log_dir(eval_log_dir)
 
-    log_dir2 = os.path.expanduser(args.log_dir2 + args.env_name2)
+    log_dir2 = os.path.expanduser(args.log_dir2 + args.env_name2  + "/distill/")
     eval_log_dir2 = log_dir + "_eval"
     utils.cleanup_log_dir(log_dir2)
     utils.cleanup_log_dir(eval_log_dir2)
@@ -56,12 +56,12 @@ def main():
 
 # 1 game
     envs = make_vec_envs(args.env_name, args.seed, args.num_processes,
-                         args.gamma, args.log_dir, device, env_conf, False)
+                         args.gamma, log_dir, device, env_conf, False)
 # 2 game
     envs2 = make_vec_envs(args.env_name2, args.seed, args.num_processes,
-                         args.gamma, args.log_dir2, device, env_conf, False)
+                         args.gamma, log_dir2, device, env_conf, False)
 
-    save_model, ob_rms = torch.load('./trained_models/PongNoFrameskip-v4.pt')
+    save_model, ob_rms = torch.load('./trained_models/onegame/a2c/PongNoFrameskip-v4.pt')
 
     from a2c_ppo_acktr.cnn import CNNBase
 
@@ -74,7 +74,7 @@ def main():
         base=a,
         #base_kwargs={'recurrent': args.recurrent_policy}
          )
-    #actor_critic.load_state_dict(save_model.state_dict())
+    actor_critic.load_state_dict(save_model.state_dict())
     actor_critic.to(device)
 
     actor_critic2 = Policy(
@@ -82,7 +82,7 @@ def main():
         envs2.action_space,
         base=a)
         #base_kwargs={'recurrent': args.recurrent_policy})
-    #actor_critic2.load_state_dict(save_model.state_dict())
+    actor_critic2.load_state_dict(save_model.state_dict())
     actor_critic2.to(device)
 
     if args.algo == 'a2c':
@@ -96,10 +96,12 @@ def main():
             alpha=args.alpha,
             max_grad_norm=args.max_grad_norm)
 
-    rollouts = RolloutStorage(args.num_steps, args.num_processes,
-                              envs.observation_space.shape, envs.action_space,
-                              actor_critic.recurrent_hidden_state_size)
+    # rollouts = RolloutStorage(args.num_steps, args.num_processes,
+    #                           envs.observation_space.shape, envs.action_space,
+    #                           actor_critic.recurrent_hidden_state_size)
+
     rollouts_load = torch.load("./collect_data/rollouts_list.pt")
+    len_rollouts_load = np.shape(rollouts_load)[0]
     for i in rollouts_load:
         i.to(device)
 
@@ -133,8 +135,8 @@ def main():
             # Sample actions
             with torch.no_grad():
                 value, action, action_log_prob, recurrent_hidden_states, dist = actor_critic.act(
-                    rollouts_load[j%1256].obs[step], rollouts_load[j%1256].recurrent_hidden_states[step],
-                    rollouts_load[j%1256].masks[step])
+                    rollouts_load[j%len_rollouts_load].obs[step], rollouts_load[j%len_rollouts_load].recurrent_hidden_states[step],
+                    rollouts_load[j%len_rollouts_load].masks[step])
 
 
                 value2, action2, action_log_prob2, recurrent_hidden_states2, dist2 = actor_critic2.act(
@@ -187,7 +189,9 @@ def main():
         rollouts2.compute_returns(next_value2, args.use_gae, args.gamma,
                                  args.gae_lambda, args.use_proper_time_limits)
 
-        value_loss, action_loss, dist_entropy, value_loss2, action_loss2, dist_entropy2 = agent.update(rollouts_load[j%1256], rollouts2)
+        #value_loss, action_loss, dist_entropy, value_loss2, action_loss2, dist_entropy2 = agent.update(rollouts_load[j%len_rollouts_load], rollouts2)
+        action_loss, value_loss2, action_loss2, dist_entropy2 = agent.update(
+            rollouts_load[j % len_rollouts_load], rollouts2)
 
         # rollouts.after_update()
         rollouts2.after_update()
@@ -195,7 +199,7 @@ def main():
         # save for every interval-th episode or for the last epoch
         if (j % args.save_interval == 0
                 or j == num_updates - 1) and args.save_dir != "":
-            save_path = os.path.join(args.save_dir, args.algo)
+            save_path = os.path.join(args.save_dir, "distill", args.algo)
             try:
                 os.makedirs(save_path)
             except OSError:
@@ -214,14 +218,14 @@ def main():
         if j % args.log_interval == 0 and len(episode_rewards) > 1:
             total_num_steps = (j + 1) * args.num_processes * args.num_steps
             end = time.time()
-            # print(
-            #     "Updates {}, num timesteps {}, FPS {} \n Last {} training episodes: mean/median reward {:.1f}/{:.1f}, min/max reward {:.1f}/{:.1f}\n"
-            #     .format(j, total_num_steps,
-            #             int(total_num_steps / (end - start)),
-            #             len(episode_rewards), np.mean(episode_rewards),
-            #             np.median(episode_rewards), np.min(episode_rewards),
-            #             np.max(episode_rewards), dist_entropy, value_loss,
-            #             action_loss))
+            print(
+                "Updates {}, num timesteps {}, FPS {} \n Last {} training episodes: mean/median reward {:.1f}/{:.1f}, min/max reward {:.1f}/{:.1f}\n"
+                .format(j, total_num_steps,
+                        int(total_num_steps / (end - start)),
+                        len(episode_rewards), np.mean(episode_rewards),
+                        np.median(episode_rewards), np.min(episode_rewards),
+                        np.max(episode_rewards)))
+            #, dist_entropy, value_loss, action_loss))
             print(
                 "Updates {}, num timesteps {}, FPS {} \n Last {} training episodes: mean/median reward {:.1f}/{:.1f}, min/max reward {:.1f}/{:.1f}\n"
                 .format(j, total_num_steps,

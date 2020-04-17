@@ -77,8 +77,8 @@ actor_critic2 = Policy(
 actor_critic2.to(device)
 
 import torch
-save_model, ob_rms = torch.load('./trained_models/a2c/PongNoFrameskip-v4.pt')
-save_model2, ob_rms2 = torch.load('./trained_models/a2c/DemonAttackNoFrameskip-v4.pt')
+save_model, ob_rms = torch.load('./trained_models/onegame/a2c/PongNoFrameskip-v4.pt')
+save_model2, ob_rms2 = torch.load('./trained_models/onegame/a2c/DemonAttackNoFrameskip-v4.pt')
 
 
 actor_critic.load_state_dict(save_model.state_dict())
