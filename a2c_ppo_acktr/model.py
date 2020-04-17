@@ -66,7 +66,7 @@ class Policy(nn.Module):
         dist = self.dist(actor_features)
 
         if deterministic:
-            action = dist.mode()
+            action = dist.mode() # argmax
         else:
             action = dist.sample()
 
@@ -90,7 +90,7 @@ class Policy(nn.Module):
         action_log_probs = dist.log_probs(action)
         dist_entropy = dist.entropy().mean()
 
-        return value, action_log_probs, dist_entropy, rnn_hxs
+        return value, action_log_probs, dist_entropy, rnn_hxs, dist
 
 
 # class NNBase(nn.Module):

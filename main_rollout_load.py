@@ -100,6 +100,8 @@ def main():
                               envs.observation_space.shape, envs.action_space,
                               actor_critic.recurrent_hidden_state_size)
     rollouts_load = torch.load("./collect_data/rollouts_list.pt")
+    for i in rollouts_load:
+        i.to(device)
 
     rollouts2 = RolloutStorage(args.num_steps, args.num_processes,
                               envs2.observation_space.shape, envs2.action_space,
@@ -130,12 +132,12 @@ def main():
         for step in range(args.num_steps):
             # Sample actions
             with torch.no_grad():
-                value, action, action_log_prob, recurrent_hidden_states, _ = actor_critic.act(
+                value, action, action_log_prob, recurrent_hidden_states, dist = actor_critic.act(
                     rollouts_load[j%1256].obs[step], rollouts_load[j%1256].recurrent_hidden_states[step],
                     rollouts_load[j%1256].masks[step])
 
 
-                value2, action2, action_log_prob2, recurrent_hidden_states2, _ = actor_critic2.act(
+                value2, action2, action_log_prob2, recurrent_hidden_states2, dist2 = actor_critic2.act(
                     rollouts2.obs[step], rollouts2.recurrent_hidden_states[step],
                     rollouts2.masks[step])
 
@@ -169,7 +171,7 @@ def main():
             # rollouts.insert(obs, recurrent_hidden_states, action,
             #                 action_log_prob, value, reward, masks, bad_masks)
             rollouts2.insert(obs2, recurrent_hidden_states2, action2,
-                            action_log_prob2, value2, reward2, masks2, bad_masks2)
+                            action_log_prob2, value2, reward2, masks2, bad_masks2, dist2)
 
         with torch.no_grad():
             # next_value = actor_critic.get_value(

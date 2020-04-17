@@ -98,7 +98,7 @@ actor_critic.to(device)
 actor_critic.eval()
 
 from a2c_ppo_acktr.storage import RolloutStorage
-rollouts = RolloutStorage(5, 16,
+rollouts = RolloutStorage(5, 16, #step, process
                               env.observation_space.shape, env.action_space,
                               actor_critic.recurrent_hidden_state_size)
 
@@ -157,7 +157,7 @@ for i in range(3):
         bad_masks = torch.FloatTensor([[0.0] if 'bad_transition' in info.keys() else [1.0] for info in infos])
 
         rollouts.insert(obs, recurrent_hidden_states, action,
-                        action_log_prob, value, reward, masks, bad_masks)
+                        action_log_prob, value, reward, masks, bad_masks, dist)
         rollouts_list.append(rollouts)
         #print(np.shape(obs)
         #new_action.append(action)
