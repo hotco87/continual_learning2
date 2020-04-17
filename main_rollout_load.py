@@ -56,10 +56,10 @@ def main():
 
 # 1 game
     envs = make_vec_envs(args.env_name, args.seed, args.num_processes,
-                         args.gamma, args.log_dir, device, env_conf, False)
+                         args.gamma, log_dir, device, env_conf, False)
 # 2 game
     envs2 = make_vec_envs(args.env_name2, args.seed, args.num_processes,
-                         args.gamma, args.log_dir2, device, env_conf, False)
+                         args.gamma, log_dir2, device, env_conf, False)
 
     save_model, ob_rms = torch.load('./trained_models/PongNoFrameskip-v4.pt')
 
