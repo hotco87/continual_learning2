@@ -75,7 +75,7 @@ def get_args():
     parser.add_argument(
         '--num-processes',
         type=int,
-        default=16,
+        default=32,
         help='how many training CPU processes to use (default: 16)')
     parser.add_argument(
         '--num-steps',
@@ -138,7 +138,7 @@ def get_args():
         help='directory to save agent logs (default: /tmp/gym)')
     parser.add_argument(
         '--save-dir',
-        default='./trained_models/',
+        default='./trained_models/onegame/',
         help='directory to save agent logs (default: ./trained_models/)')
     parser.add_argument(
         '--no-cuda',
