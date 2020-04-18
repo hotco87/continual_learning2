@@ -21,7 +21,7 @@ parser.add_argument(
     help='log interval, one log per n updates (default: 10)')
 parser.add_argument(
     '--env-name',
-    default='PongNoFrameskip-v4',
+    default='DemonAttackNoFrameskip-v4',
     help='environment to train on (default: PongNoFrameskip-v4)')
 parser.add_argument(
     '--load-dir',
@@ -89,8 +89,8 @@ actor_critic = Policy(
 	# base_kwargs={'recurrent': args.recurrent_policy}
 )
 actor_critic.to(device)
-save_model, ob_rms = torch.load('./trained_models/onegame/a2c/PongNoFrameskip-v4.pt')
-#save_model2, ob_rms2 = torch.load('./trained_models/a2c/DemonAttackNoFrameskip-v4.pt')
+#save_model, ob_rms = torch.load('./trained_models/onegame/a2c/PongNoFrameskip-v4.pt')
+save_model, ob_rms = torch.load('./trained_models/distill/a2c/DemonAttackNoFrameskip-v4.pt')
 
 
 actor_critic.load_state_dict(save_model.state_dict())
@@ -98,9 +98,9 @@ actor_critic.to(device)
 actor_critic.eval()
 
 from a2c_ppo_acktr.storage import RolloutStorage
-rollouts = RolloutStorage(5, 16, #step, process
-                              env.observation_space.shape, env.action_space,
-                              actor_critic.recurrent_hidden_state_size)
+# rollouts = RolloutStorage(5, 1, #step, process
+#                               env.observation_space.shape, env.action_space,
+#                               actor_critic.recurrent_hidden_state_size)
 
 vec_norm = get_vec_normalize(env)
 if vec_norm is not None:
@@ -111,8 +111,8 @@ recurrent_hidden_states = torch.zeros(1, actor_critic.recurrent_hidden_state_siz
 masks = torch.zeros(1, 1)
 
 obs = env.reset()
-rollouts.obs[0].copy_(obs)
-rollouts.to(device)
+# rollouts.obs[0].copy_(obs)
+# rollouts.to(device)
 
 if render_func is not None:
     render_func('human')
@@ -125,11 +125,7 @@ if args.env_name.find('Bullet') > -1:
         if (p.getBodyInfo(i)[0].decode() == "torso"):
             torsoId = i
 
-total_reward = 0
-save_state = []
-save_action = []
-save_value = []
-save_probs = []
+#total_reward = 0
 
 rollouts_list = []
 from collections import deque
@@ -139,8 +135,9 @@ import pickle
 
 for i in range(3):
     step = 0
+    total_reward = 0
     obs = env.reset()
-    for j in range(500):
+    for j in range(1000):
 #    while True:
         with torch.no_grad():
             value, action, action_log_prob, recurrent_hidden_states, dist = actor_critic.act(
@@ -148,17 +145,17 @@ for i in range(3):
 
         # Obser reward and next obs
         obs, reward, done, infos = env.step(action)
-
+        total_reward += 0
         for info in infos:
             if 'episode' in info.keys():
                 episode_rewards.append(info['episode']['r'])
 
-        masks = torch.FloatTensor([[0.0] if done_ else [1.0] for done_ in done])
-        bad_masks = torch.FloatTensor([[0.0] if 'bad_transition' in info.keys() else [1.0] for info in infos])
-
-        rollouts.insert(obs, recurrent_hidden_states, action,
-                        action_log_prob, value, reward, masks, bad_masks, dist)
-        rollouts_list.append(rollouts)
+        # masks = torch.FloatTensor([[0.0] if done_ else [1.0] for done_ in done])
+        # bad_masks = torch.FloatTensor([[0.0] if 'bad_transition' in info.keys() else [1.0] for info in infos])
+        #
+        # rollouts.insert(obs, recurrent_hidden_states, action,
+        #                 action_log_prob, value, reward, masks, bad_masks, dist)
+        # rollouts_list.append(rollouts)
         #print(np.shape(obs)
         #new_action.append(action)
         #print(action)
@@ -169,7 +166,7 @@ for i in range(3):
         #     save_value.append(value)
         #     save_probs.append(dist.probs)
 
-        #masks.fill_(0.0 if done else 1.0)
+        masks.fill_(0.0 if done else 1.0)
         step += 1
 
         if args.env_name.find('Bullet') > -1:
@@ -183,19 +180,20 @@ for i in range(3):
             render_func('human')
 
         if done:
+            print("total_reward: ", total_reward)
             break
 
-import numpy as np
-
-#rollouts_list
-#rollouts_list = [t.size() for t in rollouts_list]
-
-torch.save(rollouts_list,"./collect_data/rollouts_list.pt")
-rollouts_list = torch.load("./collect_data/rollouts_list.pt")
-
-for i in rollouts_list:
-    print(np.shape(i.obs))
-    print(np.shape(i.actions))
+# import numpy as np
+#
+# #rollouts_list
+# #rollouts_list = [t.size() for t in rollouts_list]
+#
+# torch.save(rollouts_list,"./collect_data/rollouts_list.pt")
+# rollouts_list = torch.load("./collect_data/rollouts_list.pt")
+#
+# for i in rollouts_list:
+#     print(np.shape(i.obs))
+#     print(np.shape(i.actions))
     #print(i.obs[:-1].view(-1))
 #print(rollouts_list.size())
 #print(rollouts_list.obs[:-1].view(-1))
