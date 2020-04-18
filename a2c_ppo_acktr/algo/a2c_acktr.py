@@ -104,16 +104,21 @@ class A2C_ACKTR():
         #print("advantages2 ", advantages2)
         ###########################################################
 
-        self.optimizer.zero_grad()
-        action_loss.backward()
-        #print("action_loss: ",action_loss)
+        # print("action_loss: ",action_loss)
         # (value_loss * self.value_loss_coef + action_loss -
         #  dist_entropy * self.entropy_coef).backward()
-        self.optimizer2.zero_grad()
         # print(value_loss2 * self.value_loss_coef + action_loss2 -
         #  dist_entropy2 * self.entropy_coef)
+        self.optimizer.zero_grad()
+        self.optimizer2.zero_grad()
+        # (value_loss2 * self.value_loss_coef + action_loss2 -
+        #  dist_entropy2 * self.entropy_coef).backward()
+        # action_loss.backward()
+
         (value_loss2 * self.value_loss_coef + action_loss2 -
-         dist_entropy2 * self.entropy_coef).backward()
+         dist_entropy2 * self.entropy_coef + action_loss).backward()
+        #action_loss.backward()
+
 
         if self.acktr == False:
             nn.utils.clip_grad_norm_(self.actor_critic.parameters(),
@@ -121,8 +126,9 @@ class A2C_ACKTR():
             nn.utils.clip_grad_norm_(self.actor_critic2.parameters(),
                                      self.max_grad_norm)
 
-        self.optimizer.step()
         self.optimizer2.step()
+        self.optimizer.step()
+
 
         return action_loss.item(),\
                value_loss2.item(), action_loss2.item(), dist_entropy2.item()

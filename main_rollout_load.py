@@ -55,8 +55,8 @@ def main():
             env_conf = setup_json[i]
 
 # 1 game
-    envs = make_vec_envs(args.env_name, args.seed, args.num_processes,
-                         args.gamma, log_dir, device, env_conf, False)
+#     envs = make_vec_envs(args.env_name, args.seed, args.num_processes,
+#                          args.gamma, log_dir, device, env_conf, False)
 # 2 game
     envs2 = make_vec_envs(args.env_name2, args.seed, args.num_processes,
                          args.gamma, log_dir2, device, env_conf, False)
@@ -65,11 +65,11 @@ def main():
 
     from a2c_ppo_acktr.cnn import CNNBase
 
-    a = CNNBase(envs.observation_space.shape[0], recurrent=False)
+    a = CNNBase(envs2.observation_space.shape[0], recurrent=False)
 
     actor_critic = Policy(
-        envs.observation_space.shape,
-        envs.action_space,
+        envs2.observation_space.shape,
+        envs2.action_space,
         #(obs_shape[0], ** base_kwargs)
         base=a,
         #base_kwargs={'recurrent': args.recurrent_policy}
@@ -117,7 +117,7 @@ def main():
     rollouts2.obs[0].copy_(obs2)
     rollouts2.to(device)
 
-    episode_rewards = deque(maxlen=10)
+    #episode_rewards = deque(maxlen=10)
     episode_rewards2 = deque(maxlen=10)
 
     start = time.time()
@@ -134,9 +134,9 @@ def main():
         for step in range(args.num_steps):
             # Sample actions
             with torch.no_grad():
-                value, action, action_log_prob, recurrent_hidden_states, dist = actor_critic.act(
-                    rollouts_load[j%len_rollouts_load].obs[step], rollouts_load[j%len_rollouts_load].recurrent_hidden_states[step],
-                    rollouts_load[j%len_rollouts_load].masks[step])
+                # value, action, action_log_prob, recurrent_hidden_states, dist = actor_critic.act(
+                #     rollouts_load[j%len_rollouts_load].obs[step], rollouts_load[j%len_rollouts_load].recurrent_hidden_states[step],
+                #     rollouts_load[j%len_rollouts_load].masks[step])
 
 
                 value2, action2, action_log_prob2, recurrent_hidden_states2, dist2 = actor_critic2.act(
@@ -207,7 +207,6 @@ def main():
 
             torch.save([
                 actor_critic,
-                getattr(utils.get_vec_normalize(envs), 'ob_rms', None)
             ], os.path.join(save_path, args.env_name + ".pt"))
 
             torch.save([
@@ -215,16 +214,39 @@ def main():
                 getattr(utils.get_vec_normalize(envs2), 'ob_rms2', None)
             ], os.path.join(save_path, args.env_name2 + ".pt"))
 
-        if j % args.log_interval == 0 and len(episode_rewards) > 1:
+        if j % args.log_interval == 0 and len(episode_rewards2) > 1:
             total_num_steps = (j + 1) * args.num_processes * args.num_steps
             end = time.time()
+
+            #####################################################################################
+            total_reward = 0
+            recurrent_hidden_states1 = torch.zeros(1, actor_critic.recurrent_hidden_state_size)
+            env = make_vec_envs(args.env_name, args.seed + 1000, 1, None, None, device, env_conf,
+                                allow_early_resets=False)
+            obs = env.reset()
+            masks1 = torch.zeros(1, 1)
+            while True:
+                with torch.no_grad():
+                    value, action, action_log_prob, recurrent_hidden_states, dist = actor_critic.act(
+                        obs, recurrent_hidden_states1, masks1, deterministic=True)
+                obs, reward, done, infos = env.step(action)
+                total_reward += reward
+                if done.any():
+                    break
             print(
-                "Updates {}, num timesteps {}, FPS {} \n Last {} training episodes: mean/median reward {:.1f}/{:.1f}, min/max reward {:.1f}/{:.1f}\n"
-                .format(j, total_num_steps,
-                        int(total_num_steps / (end - start)),
-                        len(episode_rewards), np.mean(episode_rewards),
-                        np.median(episode_rewards), np.min(episode_rewards),
-                        np.max(episode_rewards)))
+                "Updates {}, num timesteps {}, FPS {} \n Last {} training episodes reward: {}"#action_loss {}"
+                    .format(j, total_num_steps,
+                            int(total_num_steps / (end - start)),
+                            len(episode_rewards2), total_reward.mean()))#, action_loss))
+            #####################################################################################
+
+            # print(
+            #     "Updates {}, num timesteps {}, FPS {} \n Last {} training episodes: mean/median reward {:.1f}/{:.1f}, min/max reward {:.1f}/{:.1f}\n"
+            #     .format(j, total_num_steps,
+            #             int(total_num_steps / (end - start)),
+            #             len(episode_rewards), np.mean(episode_rewards),
+            #             np.median(episode_rewards), np.min(episode_rewards),
+            #             np.max(episode_rewards)))
             #, dist_entropy, value_loss, action_loss))
             print(
                 "Updates {}, num timesteps {}, FPS {} \n Last {} training episodes: mean/median reward {:.1f}/{:.1f}, min/max reward {:.1f}/{:.1f}\n"
@@ -235,13 +257,14 @@ def main():
                         np.max(episode_rewards2), dist_entropy2, value_loss2,
                         action_loss2))
 
-        if (args.eval_interval is not None and len(episode_rewards) > 1
+        if (args.eval_interval is not None and len(episode_rewards2) > 1
                 and j % args.eval_interval == 0):
-            ob_rms = utils.get_vec_normalize(envs).ob_rms
+            #ob_rms = utils.get_vec_normalize(envs2).ob_rms
+            ob_rms2 = utils.get_vec_normalize(envs2).ob_rms
             evaluate(actor_critic, ob_rms, args.env_name, args.seed,
                      args.num_processes, eval_log_dir, device)
 
-            ob_rms2 = utils.get_vec_normalize(envs2).ob_rms
+
             evaluate(actor_critic2, ob_rms2, args.env_name2, args.seed,
                      args.num_processes, eval_log_dir2, device)
 
