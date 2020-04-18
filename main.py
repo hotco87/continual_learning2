@@ -61,7 +61,7 @@ def main():
     envs2 = make_vec_envs(args.env_name2, args.seed, args.num_processes,
                          args.gamma, args.log_dir2, device, env_conf, False)
 
-    save_model, ob_rms = torch.load('./trained_models/PongNoFrameskip-v4.pt')
+    save_model, ob_rms = torch.load('./trained_models/onegame/a2c/PongNoFrameskip-v4.pt')
 
     from a2c_ppo_acktr.cnn import CNNBase
 
