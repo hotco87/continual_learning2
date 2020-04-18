@@ -100,7 +100,8 @@ def get_args():
     parser.add_argument(
         '--log-interval',
         type=int,
-        default=10,
+        default=100,
+        #default=10,
         help='log interval, one log per n updates (default: 10)')
     parser.add_argument(
         '--save-interval',

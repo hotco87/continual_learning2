@@ -21,7 +21,7 @@ parser.add_argument(
     help='log interval, one log per n updates (default: 10)')
 parser.add_argument(
     '--env-name',
-    default='DemonAttackNoFrameskip-v4',
+    default='PongNoFrameskip-v4',
     help='environment to train on (default: PongNoFrameskip-v4)')
 parser.add_argument(
     '--load-dir',
@@ -145,7 +145,7 @@ for i in range(3):
 
         # Obser reward and next obs
         obs, reward, done, infos = env.step(action)
-        total_reward += 0
+        total_reward += reward
         for info in infos:
             if 'episode' in info.keys():
                 episode_rewards.append(info['episode']['r'])
@@ -178,8 +178,9 @@ for i in range(3):
 
         if render_func is not None:
             render_func('human')
-
+        print(info['episode']['r'])
         if done:
+            print(episode_rewards)
             print("total_reward: ", total_reward)
             break
 
