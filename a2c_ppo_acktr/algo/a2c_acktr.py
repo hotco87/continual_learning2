@@ -58,8 +58,10 @@ class A2C_ACKTR():
         ################ student ####################
         action_s = dist.logits#sample()
         action_s = action_s.view(num_steps, num_processes, 6) # student
+        ###################################################################################################
+        ###################################################################################################
 
-        values2, action_log_probs2, dist_entropy2, _, dist = self.actor_critic2.evaluate_actions(
+        values2, action_log_probs2, dist_entropy2, _, dist2 = self.actor_critic2.evaluate_actions(
             rollouts2.obs[:-1].view(-1, *obs_shape2),
             rollouts2.recurrent_hidden_states[0].view(
                 -1, self.actor_critic2.recurrent_hidden_state_size),
@@ -115,8 +117,12 @@ class A2C_ACKTR():
         #  dist_entropy2 * self.entropy_coef).backward()
         # action_loss.backward()
 
+        #print(action_loss)
+        #print(action_loss)
+
+
         (value_loss2 * self.value_loss_coef + action_loss2 -
-         dist_entropy2 * self.entropy_coef + action_loss).backward()
+         dist_entropy2 * self.entropy_coef + action_loss*10).backward()
         #action_loss.backward()
 
 

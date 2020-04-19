@@ -33,12 +33,12 @@ def main():
         torch.backends.cudnn.benchmark = False
         torch.backends.cudnn.deterministic = True
 
-    log_dir = os.path.expanduser(args.log_dir + args.env_name  + "/distill/")
+    log_dir = os.path.expanduser(args.log_dir + args.env_name  + "/distill_test/")
     eval_log_dir = log_dir + "_eval"
     utils.cleanup_log_dir(log_dir)
     utils.cleanup_log_dir(eval_log_dir)
 
-    log_dir2 = os.path.expanduser(args.log_dir2 + args.env_name2  + "/distill/")
+    log_dir2 = os.path.expanduser(args.log_dir2 + args.env_name2  + "/distill_test/")
     eval_log_dir2 = log_dir + "_eval"
     utils.cleanup_log_dir(log_dir2)
     utils.cleanup_log_dir(eval_log_dir2)
@@ -197,9 +197,9 @@ def main():
         rollouts2.after_update()
 
         # save for every interval-th episode or for the last epoch
-        if (j % args.save_interval == 0
+        if (j % args.save_interval == 0 and j!=0
                 or j == num_updates - 1) and args.save_dir != "":
-            save_path = os.path.join(args.save_dir, "distill", args.algo)
+            save_path = os.path.join(args.save_dir, "distill_test", args.algo)
             try:
                 os.makedirs(save_path)
             except OSError:

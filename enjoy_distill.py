@@ -89,7 +89,7 @@ actor_critic = Policy(
 	# base_kwargs={'recurrent': args.recurrent_policy}
 )
 actor_critic.to(device)
-#save_model, ob_rms = torch.load('./trained_models/onegame/a2c/PongNoFrameskip-v4.pt')
+#save_model = torch.load('./trained_models/distill/a2c/PongNoFrameskip-v4.pt')[0]
 save_model, ob_rms = torch.load('./trained_models/distill/a2c/DemonAttackNoFrameskip-v4.pt')
 
 
@@ -137,7 +137,7 @@ for i in range(3):
     step = 0
     total_reward = 0
     obs = env.reset()
-    for j in range(1000):
+    for j in range(10000):
 #    while True:
         with torch.no_grad():
             value, action, action_log_prob, recurrent_hidden_states, dist = actor_critic.act(
@@ -145,7 +145,7 @@ for i in range(3):
 
         # Obser reward and next obs
         obs, reward, done, infos = env.step(action)
-        total_reward += 0
+        total_reward += reward
         for info in infos:
             if 'episode' in info.keys():
                 episode_rewards.append(info['episode']['r'])

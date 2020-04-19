@@ -77,11 +77,12 @@ actor_critic2 = Policy(
 actor_critic2.to(device)
 
 import torch
-save_model, ob_rms = torch.load('./trained_models/onegame/a2c/PongNoFrameskip-v4.pt')
-save_model2, ob_rms2 = torch.load('./trained_models/onegame/a2c/DemonAttackNoFrameskip-v4.pt')
+# save_model, ob_rms = torch.load('./trained_models/onegame/a2c/PongNoFrameskip-v4.pt')
+# save_model2, ob_rms2 = torch.load('./trained_models/onegame/a2c/DemonAttackNoFrameskip-v4.pt')
+save_model = torch.load('./trained_models/distill/a2c/PongNoFrameskip-v4.pt')
+save_model2, ob_rms2 = torch.load('./trained_models/distill/a2c/DemonAttackNoFrameskip-v4.pt')
 
-
-actor_critic.load_state_dict(save_model.state_dict())
+actor_critic.load_state_dict(save_model[0].state_dict())
 actor_critic.to(device)
 actor_critic.eval()
 
@@ -115,15 +116,22 @@ for name,param in actor_critic.named_parameters():
 	print(name)
 print("111111111##############################")
 a = 0
-for name,param in actor_critic2.named_parameters():
-	a +=1
-	#print(name)
-	#"base.main.4.weight"
-	actor_critic.register_parameter("base.critic_linear.weight", param)
 
-print("2222111111111##############################")
-for name, param in actor_critic.named_parameters():
-	print(name)
+for name,param in actor_critic2.named_parameters():
+	if name == "base.main.4.weight":
+		print(param)
+
+for name,param in actor_critic.named_parameters():
+	if name == "base.main.4.weight":
+		print(param)
+# 	a +=1
+# 	#print(name)
+# 	#"base.main.4.weight"
+# 	actor_critic.register_parameter("base.critic_linear.weight", param)
+#
+# print("2222111111111##############################")
+# for name, param in actor_critic.named_parameters():
+# 	print(name)
 	#print(type(param.data), param.size())
 
 	#actor_critic.register_parameter(param)
