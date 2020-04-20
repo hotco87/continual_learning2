@@ -53,7 +53,8 @@ def get_args():
     parser.add_argument(
         '--entropy-coef',
         type=float,
-        default=0.01,
+        default=0.005,
+        #default=0.01,
         help='entropy term coefficient (default: 0.01)')
     parser.add_argument(
         '--value-loss-coef',

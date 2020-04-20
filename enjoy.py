@@ -32,6 +32,29 @@ parser.add_argument(
     action='store_true',
     default=False,
     help='whether to use a non-deterministic policy')
+parser.add_argument(
+    '--use-gae',
+    action='store_true',
+    default=False,
+    help='use generalized advantage estimation')
+parser.add_argument(
+        '--gae-lambda',
+        type=float,
+        default=0.95,
+        help='gae lambda parameter (default: 0.95)')
+
+parser.add_argument(
+        '--gamma',
+        type=float,
+        default=0.99,
+        help='discount factor for rewards (default: 0.99)')
+parser.add_argument(
+    '--use-proper-time-limits',
+    action='store_true',
+    default=False,
+    help='compute returns taking into account time limits')
+
+
 args = parser.parse_args()
 
 args.det = not args.non_det
@@ -92,7 +115,6 @@ actor_critic.to(device)
 save_model, ob_rms = torch.load('./trained_models/onegame/a2c/PongNoFrameskip-v4.pt')
 #save_model2, ob_rms2 = torch.load('./trained_models/a2c/DemonAttackNoFrameskip-v4.pt')
 
-
 actor_critic.load_state_dict(save_model.state_dict())
 actor_critic.to(device)
 actor_critic.eval()
@@ -126,10 +148,10 @@ if args.env_name.find('Bullet') > -1:
             torsoId = i
 
 total_reward = 0
-save_state = []
-save_action = []
-save_value = []
-save_probs = []
+# save_state = []
+# save_action = []
+# save_value = []
+# save_probs = []
 
 rollouts_list = []
 from collections import deque
@@ -140,37 +162,48 @@ import pickle
 for i in range(3):
     step = 0
     obs = env.reset()
+    print("episode: ",i)
     for j in range(500):
 #    while True:
+        for step in range(5):
+            with torch.no_grad():
+                value, action, action_log_prob, recurrent_hidden_states, dist = actor_critic.act(
+                    obs, recurrent_hidden_states, masks, deterministic=args.det)
+
+            # Obser reward and next obs
+            obs, reward, done, infos = env.step(action)
+
+            for info in infos:
+                if 'episode' in info.keys():
+                    episode_rewards.append(info['episode']['r'])
+
+            masks = torch.FloatTensor([[0.0] if done_ else [1.0] for done_ in done])
+            bad_masks = torch.FloatTensor([[0.0] if 'bad_transition' in info.keys() else [1.0] for info in infos])
+
+            rollouts.insert(obs, recurrent_hidden_states, action,
+                            action_log_prob, value, reward, masks, bad_masks, dist)
         with torch.no_grad():
-            value, action, action_log_prob, recurrent_hidden_states, dist = actor_critic.act(
-                obs, recurrent_hidden_states, masks, deterministic=args.det)
-
-        # Obser reward and next obs
-        obs, reward, done, infos = env.step(action)
-
-        for info in infos:
-            if 'episode' in info.keys():
-                episode_rewards.append(info['episode']['r'])
-
-        masks = torch.FloatTensor([[0.0] if done_ else [1.0] for done_ in done])
-        bad_masks = torch.FloatTensor([[0.0] if 'bad_transition' in info.keys() else [1.0] for info in infos])
-
-        rollouts.insert(obs, recurrent_hidden_states, action,
-                        action_log_prob, value, reward, masks, bad_masks, dist)
+            # next_value = actor_critic.get_value(
+            #     rollouts.obs[-1], rollouts.recurrent_hidden_states[-1],
+            #     rollouts.masks[-1]).detach()
+            next_value = actor_critic.get_value(
+                rollouts.obs[-1], rollouts.recurrent_hidden_states[-1],
+                rollouts.masks[-1]).detach()
+        rollouts.compute_returns(next_value, args.use_gae, args.gamma, args.gae_lambda, args.use_proper_time_limits)
+        rollouts.after_update()
         rollouts_list.append(rollouts)
-        #print(np.shape(obs)
-        #new_action.append(action)
-        #print(action)
-        # if (step >= 0):
-        #     #print("start")
-        #     save_state.append(obs)
-        #     save_action.append(action)
-        #     save_value.append(value)
-        #     save_probs.append(dist.probs)
+            #print(np.shape(obs)
+            #new_action.append(action)
+            #print(action)
+            # if (step >= 0):
+            #     #print("start")
+            #     save_state.append(obs)
+            #     save_action.append(action)
+            #     save_value.append(value)
+            #     save_probs.append(dist.probs)
 
-        #masks.fill_(0.0 if done else 1.0)
-        step += 1
+            #masks.fill_(0.0 if done else 1.0)
+        #step += 1
 
         if args.env_name.find('Bullet') > -1:
             if torsoId > -1:

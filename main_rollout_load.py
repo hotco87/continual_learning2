@@ -219,25 +219,33 @@ def main():
             end = time.time()
 
             #####################################################################################
-            total_reward = 0
-            recurrent_hidden_states1 = torch.zeros(1, actor_critic.recurrent_hidden_state_size)
-            env = make_vec_envs(args.env_name, args.seed + 1000, 1, None, None, device, env_conf,
-                                allow_early_resets=False)
-            obs = env.reset()
-            masks1 = torch.zeros(1, 1)
-            while True:
-                with torch.no_grad():
-                    value, action, action_log_prob, recurrent_hidden_states, dist = actor_critic.act(
-                        obs, recurrent_hidden_states1, masks1, deterministic=True)
-                obs, reward, done, infos = env.step(action)
-                total_reward += reward
-                if done.any():
-                    break
-            print(
-                "Updates {}, num timesteps {}, FPS {} \n Last {} training episodes reward: {}"#action_loss {}"
-                    .format(j, total_num_steps,
-                            int(total_num_steps / (end - start)),
-                            len(episode_rewards2), total_reward.mean()))#, action_loss))
+            if j % (500) == 0 :
+            #if j % (10) == 0:
+                total_reward = 0
+                recurrent_hidden_states1 = torch.zeros(1, actor_critic.recurrent_hidden_state_size)
+                env = make_vec_envs(args.env_name, args.seed + 1000, 1, None, None, device, env_conf,
+                                    allow_early_resets=False)
+                vec_norm = utils.get_vec_normalize(env)
+                if vec_norm is not None:
+                    vec_norm.eval()
+                    vec_norm.ob_rms = ob_rms
+
+
+                obs = env.reset()
+                masks1 = torch.zeros(1, 1)
+                while True:
+                    with torch.no_grad():
+                        value, action, action_log_prob, recurrent_hidden_states, dist = actor_critic.act(
+                            obs, recurrent_hidden_states1, masks1, deterministic=True)
+                    obs, reward, done, infos = env.step(action)
+                    total_reward += reward
+                    if done.any():
+                        break
+                print(
+                    "Updates {}, num timesteps {}, FPS {} \n Last {} training episodes reward: {}"#action_loss {}"
+                        .format(j, total_num_steps,
+                                int(total_num_steps / (end - start)),
+                                len(episode_rewards2), total_reward.mean()))#, action_loss))
             #####################################################################################
 
             # print(
@@ -248,14 +256,14 @@ def main():
             #             np.median(episode_rewards), np.min(episode_rewards),
             #             np.max(episode_rewards)))
             #, dist_entropy, value_loss, action_loss))
-            print(
-                "Updates {}, num timesteps {}, FPS {} \n Last {} training episodes: mean/median reward {:.1f}/{:.1f}, min/max reward {:.1f}/{:.1f}\n"
-                .format(j, total_num_steps,
-                        int(total_num_steps / (end - start)),
-                        len(episode_rewards2), np.mean(episode_rewards2),
-                        np.median(episode_rewards2), np.min(episode_rewards2),
-                        np.max(episode_rewards2), dist_entropy2, value_loss2,
-                        action_loss2))
+                print(
+                    "Updates {}, num timesteps {}, FPS {} \n Last {} training episodes: mean/median reward {:.1f}/{:.1f}, min/max reward {:.1f}/{:.1f}\n"
+                    .format(j, total_num_steps,
+                            int(total_num_steps / (end - start)),
+                            len(episode_rewards2), np.mean(episode_rewards2),
+                            np.median(episode_rewards2), np.min(episode_rewards2),
+                            np.max(episode_rewards2), dist_entropy2, value_loss2,
+                            action_loss2))
 
         if (args.eval_interval is not None and len(episode_rewards2) > 1
                 and j % args.eval_interval == 0):
@@ -263,7 +271,6 @@ def main():
             ob_rms2 = utils.get_vec_normalize(envs2).ob_rms
             evaluate(actor_critic, ob_rms, args.env_name, args.seed,
                      args.num_processes, eval_log_dir, device)
-
 
             evaluate(actor_critic2, ob_rms2, args.env_name2, args.seed,
                      args.num_processes, eval_log_dir2, device)
